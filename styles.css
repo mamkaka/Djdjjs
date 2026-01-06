@@ -456,7 +456,8 @@ body {
 }
 
 .suggestion-item:hover,
-.suggestion-item:active {
+.suggestion-item:active,
+.suggestion-item.active {
     background-color: var(--surface-hover);
 }
 
@@ -468,6 +469,11 @@ body {
 .suggestion-text {
     font-size: 0.875rem;
     color: var(--text-primary);
+}
+
+/* Search Container Position */
+.search-container {
+    position: relative;
 }
 
 /* Modal */
@@ -567,6 +573,67 @@ body {
     width: 20px;
     height: 20px;
     cursor: pointer;
+}
+
+.setting-divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: var(--spacing-lg) 0;
+}
+
+.backup-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.btn-small {
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.keyboard-shortcuts-info {
+    background-color: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+}
+
+.shortcuts-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+}
+
+.shortcuts-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.shortcut-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+}
+
+.shortcut-key {
+    background-color: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+    font-family: monospace;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.shortcut-desc {
+    color: var(--text-secondary);
 }
 
 /* Voice Modal */

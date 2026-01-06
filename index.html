@@ -161,6 +161,49 @@
                         </select>
                     </label>
                 </div>
+                
+                <div class="setting-divider"></div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <span>النسخ الاحتياطي</span>
+                    </div>
+                    <div class="backup-buttons">
+                        <button class="btn btn-secondary btn-small" id="exportSettingsBtn">
+                            <span>📤</span>
+                            <span>تصدير</span>
+                        </button>
+                        <label class="btn btn-secondary btn-small" for="importSettingsInput">
+                            <span>📥</span>
+                            <span>استيراد</span>
+                        </label>
+                        <input type="file" id="importSettingsInput" accept=".json" style="display: none;">
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="keyboard-shortcuts-info">
+                        <div class="shortcuts-title">⌨️ اختصارات لوحة المفاتيح</div>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-key">Ctrl + K</span>
+                                <span class="shortcut-desc">التركيز على البحث</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-key">Ctrl + D</span>
+                                <span class="shortcut-desc">تبديل الوضع الداكن</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-key">Ctrl + /</span>
+                                <span class="shortcut-desc">فتح الإعدادات</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-key">Esc</span>
+                                <span class="shortcut-desc">إغلاق النوافذ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" id="saveSettingsBtn">حفظ</button>

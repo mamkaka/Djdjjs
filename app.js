@@ -58,6 +58,10 @@ class SearchAgent {
         this.applySettings();
         this.renderHistory();
         this.renderFavorites();
+        this.setupKeyboardShortcuts();
+        
+        // Create debounced version of showSuggestions
+        this.debouncedShowSuggestions = this.debounce(this.showSuggestions.bind(this), 300);
     }
     
     // Local Storage Management
@@ -176,6 +180,22 @@ class SearchAgent {
             this.saveSettingsFromModal();
         });
         
+        // Export/Import settings
+        const exportSettingsBtn = document.getElementById('exportSettingsBtn');
+        const importSettingsInput = document.getElementById('importSettingsInput');
+        
+        exportSettingsBtn.addEventListener('click', () => {
+            this.exportSettings();
+        });
+        
+        importSettingsInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                this.importSettings(file);
+                e.target.value = ''; // Reset input
+            }
+        });
+        
         // History
         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
         clearHistoryBtn.addEventListener('click', () => {
@@ -194,6 +214,82 @@ class SearchAgent {
                 settingsModal.classList.remove('visible');
             }
         });
+        
+        // Click outside suggestions to close
+        document.addEventListener('click', (e) => {
+            const suggestionsDropdown = document.getElementById('suggestionsDropdown');
+            const searchBox = document.querySelector('.search-box');
+            if (!searchBox.contains(e.target) && !suggestionsDropdown.contains(e.target)) {
+                this.hideSuggestions();
+            }
+        });
+    }
+    
+    // Keyboard Shortcuts
+    setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + K: Focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+            
+            // Ctrl/Cmd + /: Open settings
+            if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+                e.preventDefault();
+                this.openSettings();
+            }
+            
+            // Ctrl/Cmd + D: Toggle dark mode
+            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+                e.preventDefault();
+                this.settings.darkMode = !this.settings.darkMode;
+                this.saveSettings();
+                this.applySettings();
+                this.showToast(this.settings.darkMode ? 'تم تفعيل الوضع الداكن' : 'تم تعطيل الوضع الداكن');
+            }
+            
+            // Ctrl/Cmd + H: Clear history
+            if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+                e.preventDefault();
+                this.clearHistory();
+            }
+            
+            // Escape: Close modals and suggestions
+            if (e.key === 'Escape') {
+                document.getElementById('settingsModal').classList.remove('visible');
+                document.getElementById('voiceModal').classList.remove('visible');
+                this.hideSuggestions();
+                if (this.recognition) {
+                    this.recognition.stop();
+                }
+            }
+            
+            // Arrow keys for suggestions navigation
+            const suggestionsDropdown = document.getElementById('suggestionsDropdown');
+            if (suggestionsDropdown.classList.contains('visible')) {
+                const items = suggestionsDropdown.querySelectorAll('.suggestion-item');
+                const activeItem = suggestionsDropdown.querySelector('.suggestion-item.active');
+                let currentIndex = Array.from(items).indexOf(activeItem);
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    currentIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+                    items.forEach((item, index) => {
+                        item.classList.toggle('active', index === currentIndex);
+                    });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    currentIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+                    items.forEach((item, index) => {
+                        item.classList.toggle('active', index === currentIndex);
+                    });
+                } else if (e.key === 'Enter' && activeItem) {
+                    e.preventDefault();
+                    activeItem.click();
+                }
+            }
+        });
     }
     
     // Search Functions
@@ -201,9 +297,83 @@ class SearchAgent {
         const clearBtn = document.getElementById('clearBtn');
         if (value.length > 0) {
             clearBtn.classList.add('visible');
+            // Show suggestions with debouncing
+            this.debouncedShowSuggestions(value);
         } else {
             clearBtn.classList.remove('visible');
+            this.hideSuggestions();
         }
+    }
+    
+    // Debounce function for performance
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+    
+    // Show search suggestions
+    showSuggestions(query) {
+        if (!query || query.trim().length < 2) {
+            this.hideSuggestions();
+            return;
+        }
+        
+        // Get suggestions from history
+        const historySuggestions = this.searchHistory
+            .filter(item => item.query.toLowerCase().includes(query.toLowerCase()))
+            .slice(0, 5)
+            .map(item => ({
+                text: item.query,
+                type: 'history',
+                icon: '🕐'
+            }));
+        
+        // Common search suggestions
+        const commonSuggestions = [
+            { text: query + ' معنى', type: 'suggestion', icon: '🔍' },
+            { text: query + ' شرح', type: 'suggestion', icon: '🔍' },
+            { text: query + ' تحميل', type: 'suggestion', icon: '🔍' }
+        ];
+        
+        const allSuggestions = [...historySuggestions, ...commonSuggestions].slice(0, 8);
+        
+        if (allSuggestions.length === 0) {
+            this.hideSuggestions();
+            return;
+        }
+        
+        const dropdown = document.getElementById('suggestionsDropdown');
+        dropdown.innerHTML = allSuggestions.map(suggestion => `
+            <div class="suggestion-item" data-query="${this.escapeHtml(suggestion.text)}">
+                <span class="suggestion-icon">${suggestion.icon}</span>
+                <span class="suggestion-text">${this.escapeHtml(suggestion.text)}</span>
+            </div>
+        `).join('');
+        
+        // Add click handlers
+        dropdown.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const query = item.dataset.query;
+                document.getElementById('searchInput').value = query;
+                this.hideSuggestions();
+                this.performSearch(query);
+            });
+        });
+        
+        dropdown.classList.add('visible');
+    }
+    
+    hideSuggestions() {
+        const dropdown = document.getElementById('suggestionsDropdown');
+        dropdown.classList.remove('visible');
+        dropdown.innerHTML = '';
     }
     
     performSearch(query, type = 'web') {
@@ -462,6 +632,84 @@ class SearchAgent {
         
         document.getElementById('settingsModal').classList.remove('visible');
         this.showToast('تم حفظ الإعدادات');
+    }
+    
+    // Export/Import Settings
+    exportSettings() {
+        const data = {
+            settings: this.settings,
+            history: this.searchHistory,
+            favorites: this.favorites,
+            exportDate: new Date().toISOString(),
+            version: '1.0'
+        };
+        
+        const dataStr = JSON.stringify(data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `search-agent-backup-${Date.now()}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        this.showToast('تم تصدير الإعدادات بنجاح');
+    }
+    
+    importSettings(file) {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                
+                // Validate data structure
+                if (!data.settings || !data.version) {
+                    throw new Error('Invalid backup file');
+                }
+                
+                // Import settings
+                if (data.settings) {
+                    this.settings = { ...this.settings, ...data.settings };
+                    this.saveSettings();
+                    this.applySettings();
+                }
+                
+                // Import history
+                if (data.history && Array.isArray(data.history)) {
+                    this.searchHistory = data.history;
+                    this.saveHistory();
+                    this.renderHistory();
+                }
+                
+                // Import favorites
+                if (data.favorites && Array.isArray(data.favorites)) {
+                    this.favorites = data.favorites;
+                    this.saveFavorites();
+                    this.renderFavorites();
+                }
+                
+                this.showToast('تم استيراد الإعدادات بنجاح');
+                
+                // Refresh settings modal if open
+                const modal = document.getElementById('settingsModal');
+                if (modal.classList.contains('visible')) {
+                    this.openSettings();
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                this.showToast('فشل استيراد الإعدادات - ملف غير صالح');
+            }
+        };
+        
+        reader.onerror = () => {
+            this.showToast('فشل قراءة الملف');
+        };
+        
+        reader.readAsText(file);
     }
     
     applySettings() {
